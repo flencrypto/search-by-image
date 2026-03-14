@@ -61,6 +61,30 @@ const FACE_RESULTS_TIMEOUT_MS = 15000; // Fallback timeout to mark remaining fac
 
 // Face search results storage
 const faceSearchSessions = {};
+const FACE_SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+// Periodically prune stale face search sessions by TTL
+setInterval(() => {
+  const now = Date.now();
+  for (const [sessionId, sessionData] of Object.entries(faceSearchSessions)) {
+    if (sessionData && typeof sessionData.createdAt === 'number') {
+      if (now - sessionData.createdAt > FACE_SESSION_TTL_MS) {
+        delete faceSearchSessions[sessionId];
+      }
+    }
+  }
+}, FACE_SESSION_TTL_MS);
+
+// Clean up face search sessions when their result tab is closed
+if (browser && browser.tabs && browser.tabs.onRemoved) {
+  browser.tabs.onRemoved.addListener(closedTabId => {
+    for (const [sessionId, sessionData] of Object.entries(faceSearchSessions)) {
+      if (sessionData && sessionData.tabId === closedTabId) {
+        delete faceSearchSessions[sessionId];
+      }
+    }
+  });
+}
 
 function getFaceResultsUrl(sessionId) {
   return (
@@ -77,7 +101,8 @@ async function openFaceResultsPage(session) {
   faceSearchSessions[sessionId] = {
     engines: {},
     tabId: null,
-    pendingEngines: []
+    pendingEngines: [],
+    createdAt: Date.now()
   };
 
   const tabUrl = getFaceResultsUrl(sessionId);
