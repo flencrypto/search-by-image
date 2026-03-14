@@ -1,6 +1,88 @@
 <template>
   <vn-app v-show="dataLoaded">
-    <div class="grid" v-if="results.length">
+    <div v-if="isFaceMode" class="face-results-container">
+      <div class="face-results-header">
+        <h1 class="face-results-title">{{ getText('pageTitle_faceResults') }}</h1>
+        <div class="face-results-status" v-if="pendingEngines.length > 0">
+          {{ getText('faceSearch_searching') }}
+        </div>
+        <div class="face-results-status face-results-done" v-else-if="totalResults > 0">
+          {{ getText('faceSearch_found', [totalResults.toString()]) }}
+        </div>
+        <div class="face-results-status" v-else>
+          {{ getText('faceSearch_noResults') }}
+        </div>
+      </div>
+
+      <div
+        class="face-engine-section"
+        v-for="(engineData, engineName) in engineResults"
+        :key="engineName"
+      >
+        <div class="face-engine-header">
+          <img
+            class="face-engine-icon"
+            :src="getEngineIconUrl(engineName)"
+            @error="onIconError"
+          />
+          <span class="face-engine-name">{{
+            getText('engineName_' + engineName)
+          }}</span>
+          <span class="face-engine-count" v-if="engineData.results.length > 0">
+            ({{ engineData.results.length }})
+          </span>
+          <a
+            v-if="engineData.pageUrl"
+            class="face-engine-link"
+            :href="engineData.pageUrl"
+            target="_blank"
+            >{{ getText('faceSearch_viewOnSite') }}</a
+          >
+        </div>
+
+        <div class="face-results-grid" v-if="engineData.results.length > 0">
+          <div
+            class="face-result-card"
+            v-for="(result, idx) in engineData.results"
+            :key="idx"
+            @click="openFaceResult(result)"
+          >
+            <img class="face-result-image" :src="result.image" />
+            <div class="face-result-info" v-if="result.page">
+              <div class="face-result-url" :title="result.page">
+                {{ formatUrl(result.page) }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="face-engine-no-results" v-else>
+          {{ getText('faceSearch_engineNoResults') }}
+        </div>
+      </div>
+
+      <div
+        class="face-engine-section face-engine-pending"
+        v-for="engineName in pendingEngines"
+        :key="'pending-' + engineName"
+      >
+        <div class="face-engine-header">
+          <img
+            class="face-engine-icon"
+            :src="getEngineIconUrl(engineName)"
+            @error="onIconError"
+          />
+          <span class="face-engine-name">{{
+            getText('engineName_' + engineName)
+          }}</span>
+          <img
+            class="face-engine-spinner"
+            src="/src/assets/icons/misc/spinner.svg"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" v-if="!isFaceMode && results.length">
       <div
         class="grid-item"
         tabindex="0"
@@ -29,7 +111,7 @@
         </div>
       </div>
     </div>
-    <div v-if="!resultsLoaded" class="page-overlay">
+    <div v-if="!isFaceMode && !resultsLoaded" class="page-overlay">
       <div class="error-content" v-if="error">
         <vn-icon
           class="error-icon"
@@ -74,7 +156,14 @@ export default {
       showSpinner: false,
       engine: '',
       results: [],
-      resultsLoaded: false
+      resultsLoaded: false,
+
+      // Face search mode
+      isFaceMode: false,
+      faceSessionId: '',
+      engineResults: {},
+      pendingEngines: [],
+      pollTimer: null
     };
   },
 
@@ -83,6 +172,13 @@ export default {
       return {
         'grid-item-loaded': this.resultsLoaded
       };
+    },
+    totalResults: function () {
+      let count = 0;
+      for (const engineData of Object.values(this.engineResults)) {
+        count += engineData.results.length;
+      }
+      return count;
     }
   },
 
@@ -90,7 +186,21 @@ export default {
     getText,
 
     setup: async function () {
-      const storageId = new URL(window.location.href).searchParams.get('id');
+      const params = new URL(window.location.href).searchParams;
+
+      // Check if this is a face search results page
+      if (params.get('mode') === 'face') {
+        this.isFaceMode = true;
+        this.faceSessionId = params.get('session');
+        this.dataLoaded = true;
+
+        document.title = getText('pageTitle_faceResults');
+
+        this.pollForResults();
+        return;
+      }
+
+      const storageId = params.get('id');
 
       const task = await browser.runtime.sendMessage({
         id: 'storageRequest',
@@ -191,6 +301,69 @@ export default {
       }
     },
 
+    pollForResults: async function () {
+      if (!this.faceSessionId) return;
+
+      try {
+        const data = await browser.runtime.sendMessage({
+          id: 'getFaceSearchResults',
+          sessionId: this.faceSessionId
+        });
+
+        if (data) {
+          // Update engine results
+          for (const [engineName, engineData] of Object.entries(
+            data.engines || {}
+          )) {
+            this.engineResults[engineName] = engineData;
+          }
+          // Force reactivity update
+          this.engineResults = {...this.engineResults};
+
+          this.pendingEngines = (data.pendingEngines || []).filter(
+            e => !this.engineResults[e]
+          );
+        }
+      } catch (e) {
+        // Background may not be ready yet
+      }
+
+      // Keep polling while there are pending engines
+      if (this.pendingEngines.length > 0) {
+        this.pollTimer = setTimeout(() => this.pollForResults(), 2000);
+      } else {
+        // Do a few more polls to catch late results
+        this.pollTimer = setTimeout(() => {
+          this.pollForResults();
+        }, 5000);
+      }
+    },
+
+    getEngineIconUrl: function (engineName) {
+      return `/src/assets/icons/engines/${engineName}.svg`;
+    },
+
+    onIconError: function (e) {
+      e.target.style.display = 'none';
+    },
+
+    formatUrl: function (url) {
+      try {
+        const u = new URL(url);
+        return u.hostname + u.pathname.substring(0, 30);
+      } catch (e) {
+        return url.substring(0, 40);
+      }
+    },
+
+    openFaceResult: async function (result) {
+      if (result.page) {
+        await showPage({url: result.page});
+      } else if (result.image) {
+        await showPage({url: result.image});
+      }
+    },
+
     layoutGrid: function () {
       this.$nextTick(() => {
         const grid = document.querySelector('.grid');
@@ -225,6 +398,12 @@ export default {
 
   created: function () {
     this.setup();
+  },
+
+  beforeUnmount: function () {
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer);
+    }
   }
 };
 </script>
@@ -291,6 +470,136 @@ body,
   }
 }
 
+/* Face search results styles */
+.face-results-container {
+  width: 100%;
+  max-width: 1200px;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.face-results-header {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.face-results-title {
+  @include vueton.md2-typography(headline5);
+  margin: 0 0 8px 0;
+}
+
+.face-results-status {
+  @include vueton.md2-typography(subtitle1);
+  opacity: 0.7;
+}
+
+.face-results-done {
+  opacity: 1;
+  color: #4caf50;
+}
+
+.face-engine-section {
+  margin-bottom: 24px;
+  padding: 16px;
+  border-radius: 12px;
+  @include vueton.theme-prop(background-color, surface-variant);
+}
+
+.face-engine-pending {
+  opacity: 0.6;
+}
+
+.face-engine-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.face-engine-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+
+.face-engine-name {
+  @include vueton.md2-typography(subtitle1);
+  font-weight: 500;
+}
+
+.face-engine-count {
+  @include vueton.md2-typography(body2);
+  opacity: 0.7;
+}
+
+.face-engine-link {
+  margin-left: auto;
+  @include vueton.md2-typography(body2);
+  text-decoration: none;
+  opacity: 0.8;
+
+  &:hover {
+    opacity: 1;
+    text-decoration: underline;
+  }
+}
+
+.face-engine-spinner {
+  width: 20px;
+  height: 20px;
+  margin-left: 8px;
+}
+
+.face-engine-no-results {
+  @include vueton.md2-typography(body2);
+  opacity: 0.5;
+  padding: 8px 0;
+}
+
+.face-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+}
+
+.face-result-card {
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  @include vueton.theme-prop(background-color, surface);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.face-result-image {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  display: block;
+}
+
+.face-result-info {
+  padding: 8px;
+}
+
+.face-result-url {
+  @include vueton.md2-typography(caption);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0.7;
+}
+
+/* Original grid styles */
 .grid {
   padding: 8px;
 

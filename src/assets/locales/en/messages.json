@@ -481,6 +481,36 @@
     "message": "Contribute",
     "description": "Title of the page."
   },
+  "pageTitle_faceResults": {
+    "message": "Face Search Results",
+    "description": "Title of the face search results page."
+  },
+  "faceSearch_searching": {
+    "message": "Searching for this person across the internet...",
+    "description": "Status message while face search is in progress."
+  },
+  "faceSearch_found": {
+    "message": "Found $COUNT$ matches across the internet",
+    "description": "Status message when face search results are found.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "5"
+      }
+    }
+  },
+  "faceSearch_noResults": {
+    "message": "No matches found yet. Engines may still be processing.",
+    "description": "Status message when no face search results are found."
+  },
+  "faceSearch_viewOnSite": {
+    "message": "View on site",
+    "description": "Link text to view results on the search engine site."
+  },
+  "faceSearch_engineNoResults": {
+    "message": "No matches found on this engine",
+    "description": "Message when an engine returns no results."
+  },
   "actionMenu_viewImage": {
     "message": "Open image",
     "description": "Title of the menu item."

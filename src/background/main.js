@@ -58,6 +58,64 @@ import {targetEnv, mv3} from 'utils/config';
 
 const queue = new Queue({concurrency: 1});
 
+// Face search results storage
+const faceSearchSessions = {};
+
+function getFaceResultsUrl(sessionId) {
+  return (
+    browser.runtime.getURL('/src/search/index.html') +
+    '?mode=face&session=' +
+    sessionId
+  );
+}
+
+async function openFaceResultsPage(session) {
+  const sessionId = session.id || uuidv4();
+  session.faceSessionId = sessionId;
+
+  faceSearchSessions[sessionId] = {
+    engines: {},
+    tabId: null,
+    pendingEngines: []
+  };
+
+  const tabUrl = getFaceResultsUrl(sessionId);
+
+  const tab = await browser.tabs.create({
+    url: tabUrl,
+    index: session.sourceTabIndex + 1,
+    active: true
+  });
+
+  faceSearchSessions[sessionId].tabId = tab.id;
+  session.sourceTabIndex = tab.index;
+
+  return tab;
+}
+
+function handleFaceSearchResults(request) {
+  // Find the session that this engine belongs to
+  for (const [sessionId, sessionData] of Object.entries(faceSearchSessions)) {
+    if (
+      sessionData.pendingEngines.includes(request.engine) ||
+      !sessionData.engines[request.engine]
+    ) {
+      sessionData.engines[request.engine] = {
+        results: request.results || [],
+        pageUrl: request.pageUrl || '',
+        status: 'done'
+      };
+
+      // Remove from pending
+      sessionData.pendingEngines = sessionData.pendingEngines.filter(
+        e => e !== request.engine
+      );
+
+      break;
+    }
+  }
+}
+
 async function addContentRequestListener({
   url,
   origin = '',
@@ -888,6 +946,17 @@ async function searchImage(session, image, firstBatchItem = true) {
     session.searchMode
   );
 
+  // Open face results page before engine tabs
+  if (firstBatchItem && searches.length > 0) {
+    const faceEngineNames = searches.map(s => s.engine);
+    const resultsTab = await openFaceResultsPage(session);
+
+    if (session.faceSessionId && faceSearchSessions[session.faceSessionId]) {
+      faceSearchSessions[session.faceSessionId].pendingEngines =
+        faceEngineNames;
+    }
+  }
+
   const altReceiptSearches = searches.filter(item => item.isAltImage);
 
   let altImage, altImageId;
@@ -929,7 +998,7 @@ async function searchImage(session, image, firstBatchItem = true) {
       imgId = imageId;
     }
 
-    await searchEngine(session, search, img, imgId, tabActive);
+    await searchEngine(session, search, img, imgId, false);
 
     if (firstEngine && session.closeSourceTab) {
       await browser.tabs.remove(session.sourceTabId);
@@ -1679,6 +1748,17 @@ async function processMessage(request, sender) {
     );
 
     return Promise.resolve(storageId);
+  } else if (request.id === 'faceSearchResults') {
+    handleFaceSearchResults(request);
+  } else if (request.id === 'getFaceSearchResults') {
+    const sessionData = faceSearchSessions[request.sessionId];
+    if (sessionData) {
+      return Promise.resolve({
+        engines: sessionData.engines,
+        pendingEngines: sessionData.pendingEngines
+      });
+    }
+    return Promise.resolve({engines: {}, pendingEngines: []});
   }
 }
 
