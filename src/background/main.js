@@ -57,6 +57,7 @@ import {optionKeys, engines, chromeMobileUA, chromeDesktopUA} from 'utils/data';
 import {targetEnv, mv3} from 'utils/config';
 
 const queue = new Queue({concurrency: 1});
+const FACE_RESULTS_TIMEOUT_MS = 15000; // Fallback timeout to mark remaining face search engines as done
 
 // Face search results storage
 const faceSearchSessions = {};
@@ -954,6 +955,19 @@ async function searchImage(session, image, firstBatchItem = true) {
     if (session.faceSessionId && faceSearchSessions[session.faceSessionId]) {
       faceSearchSessions[session.faceSessionId].pendingEngines =
         faceEngineNames;
+
+      // Ensure the session eventually completes even if some engines never send results
+      const faceSessionId = session.faceSessionId;
+      setTimeout(() => {
+        const faceSession = faceSearchSessions[faceSessionId];
+        if (
+          faceSession &&
+          Array.isArray(faceSession.pendingEngines) &&
+          faceSession.pendingEngines.length > 0
+        ) {
+          faceSession.pendingEngines = [];
+        }
+      }, FACE_RESULTS_TIMEOUT_MS);
     }
   }
 
