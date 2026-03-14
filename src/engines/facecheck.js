@@ -82,14 +82,16 @@ async function search({session, search, image, storageIds}) {
       id: 'faceSearchResults',
       engine: 'facecheck',
       results,
-      pageUrl: window.location.href
+      pageUrl: window.location.href,
+      sessionId: session.faceSessionId
     });
   } catch (e) {
     await browser.runtime.sendMessage({
       id: 'faceSearchResults',
       engine: 'facecheck',
       results: [],
-      pageUrl: window.location.href
+      pageUrl: window.location.href,
+      sessionId: session.faceSessionId
     });
   }
 }
