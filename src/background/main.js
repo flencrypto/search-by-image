@@ -51,12 +51,116 @@ import {
   runOnce
 } from 'utils/common';
 import {getScriptFunction} from 'utils/scripts';
-import {searchGoogleImages, searchPinterest} from 'utils/engines';
+import {searchGoogleImages} from 'utils/engines';
 import registry from 'utils/registry';
 import {optionKeys, engines, chromeMobileUA, chromeDesktopUA} from 'utils/data';
 import {targetEnv, mv3} from 'utils/config';
 
 const queue = new Queue({concurrency: 1});
+const FACE_RESULTS_TIMEOUT_MS = 15000; // Fallback timeout to mark remaining face search engines as done
+
+// Face search results storage
+const faceSearchSessions = {};
+const FACE_SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+// Periodically prune stale face search sessions by TTL
+setInterval(() => {
+  const now = Date.now();
+  for (const [sessionId, sessionData] of Object.entries(faceSearchSessions)) {
+    if (sessionData && typeof sessionData.createdAt === 'number') {
+      if (now - sessionData.createdAt > FACE_SESSION_TTL_MS) {
+        delete faceSearchSessions[sessionId];
+      }
+    }
+  }
+}, FACE_SESSION_TTL_MS);
+
+// Clean up face search sessions when their result tab is closed
+if (browser && browser.tabs && browser.tabs.onRemoved) {
+  browser.tabs.onRemoved.addListener(closedTabId => {
+    for (const [sessionId, sessionData] of Object.entries(faceSearchSessions)) {
+      if (sessionData && sessionData.tabId === closedTabId) {
+        delete faceSearchSessions[sessionId];
+      }
+    }
+  });
+}
+
+function getFaceResultsUrl(sessionId) {
+  return (
+    browser.runtime.getURL('/src/search/index.html') +
+    '?mode=face&session=' +
+    sessionId
+  );
+}
+
+async function openFaceResultsPage(session) {
+  const sessionId = session.id || uuidv4();
+  session.faceSessionId = sessionId;
+
+  faceSearchSessions[sessionId] = {
+    engines: {},
+    tabId: null,
+    pendingEngines: [],
+    createdAt: Date.now()
+  };
+
+  const tabUrl = getFaceResultsUrl(sessionId);
+
+  const tab = await browser.tabs.create({
+    url: tabUrl,
+    index: session.sourceTabIndex + 1,
+    active: true
+  });
+
+  faceSearchSessions[sessionId].tabId = tab.id;
+  session.sourceTabIndex = tab.index;
+
+  return tab;
+}
+
+function handleFaceSearchResults(request) {
+  const {sessionId, engine, results, pageUrl} = request;
+
+  // Prefer direct session lookup when sessionId is provided
+  if (sessionId && faceSearchSessions[sessionId]) {
+    const sessionData = faceSearchSessions[sessionId];
+
+    sessionData.engines[engine] = {
+      results: results || [],
+      pageUrl: pageUrl || '',
+      status: 'done'
+    };
+
+    // Remove from pending
+    sessionData.pendingEngines = sessionData.pendingEngines.filter(
+      e => e !== engine
+    );
+
+    return;
+  }
+
+  // Fallback: attempt to find the session that this engine belongs to
+  for (const [id, sessionData] of Object.entries(faceSearchSessions)) {
+    if (
+      sessionData.pendingEngines.includes(engine) ||
+      !sessionData.engines[engine]
+    ) {
+      sessionData.engines[engine] = {
+        results: results || [],
+        pageUrl: pageUrl || '',
+        status: 'done'
+      };
+
+      // Remove from pending
+      sessionData.pendingEngines = sessionData.pendingEngines.filter(
+        e => e !== engine
+      );
+
+      break;
+    }
+  }
+}
 
 async function addContentRequestListener({
   url,
@@ -816,9 +920,7 @@ async function getTabUrl(session, search, image, taskId) {
 
   if (search.assetType === 'url') {
     let imgUrl = image.imageUrl;
-    if (engine !== 'ascii2d') {
-      imgUrl = encodeURIComponent(imgUrl);
-    }
+    imgUrl = encodeURIComponent(imgUrl);
     tabUrl = tabUrl.replace('{imgUrl}', imgUrl);
 
     if (engine === 'googleImages' && !session.options.localGoogle) {
@@ -890,6 +992,30 @@ async function searchImage(session, image, firstBatchItem = true) {
     session.searchMode
   );
 
+  // Open face results page before engine tabs
+  if (firstBatchItem && searches.length > 0) {
+    const faceEngineNames = searches.map(s => s.engine);
+    const resultsTab = await openFaceResultsPage(session);
+
+    if (session.faceSessionId && faceSearchSessions[session.faceSessionId]) {
+      faceSearchSessions[session.faceSessionId].pendingEngines =
+        faceEngineNames;
+
+      // Ensure the session eventually completes even if some engines never send results
+      const faceSessionId = session.faceSessionId;
+      setTimeout(() => {
+        const faceSession = faceSearchSessions[faceSessionId];
+        if (
+          faceSession &&
+          Array.isArray(faceSession.pendingEngines) &&
+          faceSession.pendingEngines.length > 0
+        ) {
+          faceSession.pendingEngines = [];
+        }
+      }, FACE_RESULTS_TIMEOUT_MS);
+    }
+  }
+
   const altReceiptSearches = searches.filter(item => item.isAltImage);
 
   let altImage, altImageId;
@@ -931,7 +1057,7 @@ async function searchImage(session, image, firstBatchItem = true) {
       imgId = imageId;
     }
 
-    await searchEngine(session, search, img, imgId, tabActive);
+    await searchEngine(session, search, img, imgId, false);
 
     if (firstEngine && session.closeSourceTab) {
       await browser.tabs.remove(session.sourceTabId);
@@ -1650,8 +1776,6 @@ async function processMessage(request, sender) {
       let data;
       if (search.engine === 'googleImages') {
         data = await searchGoogleImages({session, search, image});
-      } else if (search.engine === 'pinterest') {
-        data = await searchPinterest({session, search, image});
       }
 
       return Promise.resolve({data});
@@ -1683,6 +1807,17 @@ async function processMessage(request, sender) {
     );
 
     return Promise.resolve(storageId);
+  } else if (request.id === 'faceSearchResults') {
+    handleFaceSearchResults(request);
+  } else if (request.id === 'getFaceSearchResults') {
+    const sessionData = faceSearchSessions[request.sessionId];
+    if (sessionData) {
+      return Promise.resolve({
+        engines: sessionData.engines,
+        pendingEngines: sessionData.pendingEngines
+      });
+    }
+    return Promise.resolve({engines: {}, pendingEngines: []});
   }
 }
 

@@ -29,15 +29,15 @@ const optionKeys = [
 const searchUrl = browser.runtime.getURL('/src/search/index.html') + '?id={id}';
 
 const engines = {
-  bing: {
-    url: {
-      target:
-        'https://www.bing.com/images/search?q=imgurl:{imgUrl}&view=detailv2' +
-        '&iss=sbi&FORM=IRSBIQ&redirecturl=https%3A%2F%2Fwww.bing.com' +
-        '%2Fimages%2Fdiscover%3Fform%3DHDRSC2#enterInsights'
-    },
+  pimeyes: {
     image: {
-      target: 'https://www.bing.com/',
+      target: 'https://pimeyes.com/en',
+      isExec: true
+    }
+  },
+  facecheck: {
+    image: {
+      target: 'https://facecheck.id/',
       isExec: true
     }
   },
@@ -50,13 +50,15 @@ const engines = {
       isExec: true
     }
   },
-  baidu: {
+  bing: {
     url: {
-      target: 'https://www.baidu.com/',
-      isExec: true
+      target:
+        'https://www.bing.com/images/search?q=imgurl:{imgUrl}&view=detailv2' +
+        '&iss=sbi&FORM=IRSBIQ&redirecturl=https%3A%2F%2Fwww.bing.com' +
+        '%2Fimages%2Fdiscover%3Fform%3DHDRSC2#enterInsights'
     },
     image: {
-      target: 'https://www.baidu.com/',
+      target: 'https://www.bing.com/',
       isExec: true
     }
   },
@@ -67,224 +69,6 @@ const engines = {
       isExec: true
     }
   },
-  sogou: {
-    url: {target: 'https://pic.sogou.com/ris?query={imgUrl}&flag=1&drag=0'},
-    image: {
-      target: 'https://pic.sogou.com/',
-      isExec: true
-    }
-  },
-  whatanime: {
-    url: {target: 'https://trace.moe/?url={imgUrl}'},
-    image: {
-      target: 'https://trace.moe/',
-      isExec: true
-    }
-  },
-  saucenao: {
-    url: {
-      target: 'https://saucenao.com/',
-      isExec: true
-    },
-    image: {
-      target: 'https://saucenao.com/',
-      isExec: true
-    }
-  },
-  iqdb: {
-    url: {target: 'https://iqdb.org/?url={imgUrl}'},
-    image: {
-      target: 'https://iqdb.org/',
-      isExec: true
-    }
-  },
-  ascii2d: {
-    url: {target: 'https://ascii2d.net/search/url/{imgUrl}'},
-    image: {
-      target: 'https://ascii2d.net/',
-      isExec: true
-    }
-  },
-  getty: {
-    image: {
-      target: 'https://www.gettyimages.com/',
-      isExec: true
-    }
-  },
-  istock: {
-    image: {
-      target: 'https://www.istockphoto.com/',
-      isExec: true
-    }
-  },
-  shutterstock: {
-    image: {
-      target: 'https://www.shutterstock.com/images',
-      isExec: true
-    }
-  },
-  adobestock: {
-    image: {
-      target: 'https://stock.adobe.com/',
-      isExec: true
-    }
-  },
-  depositphotos: {
-    image: {
-      target: 'https://depositphotos.com/',
-      isExec: true
-    }
-  },
-  pinterest: {
-    image: {
-      target: searchUrl,
-      isTaskId: true
-    }
-  },
-  qihoo: {
-    image: {
-      target: 'https://st.so.com/',
-      isExec: true
-    }
-  },
-  taobao: {
-    image: {
-      target: 'https://www.taobao.com/',
-      isExec: true
-    }
-  },
-  alibabaChina: {
-    image: {
-      target: 'https://www.1688.com/',
-      isExec: true
-    }
-  },
-  dreamstime: {
-    image: {
-      target: 'https://www.dreamstime.com/',
-      isExec: true
-    }
-  },
-  alamy: {
-    image: {
-      target: 'https://www.alamy.com/',
-      isExec: true
-    }
-  },
-  '123rf': {
-    image: {
-      target: 'https://www.123rf.com/',
-      isExec: true
-    }
-  },
-  esearch: {
-    image: {
-      target: 'https://euipo.europa.eu/eSearch/',
-      isExec: true
-    }
-  },
-  tmview: {
-    image: {
-      target: 'https://www.tmdn.org/tmview/#/tmview',
-      isExec: true
-    }
-  },
-  branddb: {
-    image: {
-      target: 'https://branddb.wipo.int/en/similarlogo',
-      isExec: true
-    }
-  },
-  madridMonitor: {
-    image: {
-      target: 'https://www3.wipo.int/madrid/monitor/en/',
-      isExec: true
-    }
-  },
-  auTrademark: {
-    image: {
-      target: 'https://search.ipaustralia.gov.au/trademarks/search/advanced',
-      isExec: true
-    }
-  },
-  auDesign: {
-    image: {
-      target: 'https://search.ipaustralia.gov.au/designs/search/advanced',
-      isExec: true
-    }
-  },
-  nzTrademark: {
-    image: {
-      target: 'https://app.iponz.govt.nz/app/TradeMarkCheck',
-      isExec: true
-    }
-  },
-  jpDesign: {
-    image: {
-      target: 'https://www.graphic-image.inpit.go.jp/',
-      isExec: true
-    }
-  },
-  pimeyes: {
-    image: {
-      target: 'https://pimeyes.com/en',
-      isExec: true
-    }
-  },
-  stocksy: {
-    image: {
-      target: 'https://www.stocksy.com/',
-      isExec: true
-    }
-  },
-  pond5: {
-    image: {
-      target: 'https://www.pond5.com/stock-images/',
-      isExec: true
-    }
-  },
-  pixta: {
-    image: {
-      target: 'https://www.pixtastock.com/',
-      isExec: true
-    }
-  },
-  ikea: {
-    image: {
-      target: 'https://www.ikea.com/',
-      isExec: true
-    }
-  },
-  repostSleuth: {
-    url: {
-      target:
-        'https://repostsleuth.com/search?targetImageMatch=60&filterSameAuthor=false',
-      isExec: true
-    },
-    image: {
-      target:
-        'https://repostsleuth.com/search?targetImageMatch=60&filterSameAuthor=false',
-      isExec: true
-    }
-  },
-  shein: {
-    image: {
-      target: 'https://m.shein.com/presearch',
-      isExec: true
-    }
-  },
-  lykdat: {
-    image: {
-      target: 'https://lykdat.com/',
-      isExec: true
-    }
-  },
-  wildberries: {
-    image: {
-      target: 'https://www.wildberries.ru/',
-      isExec: true
-    }
-  },
   googleLens: {
     url: {
       target: 'https://www.google.com/webhp',
@@ -292,35 +76,6 @@ const engines = {
     },
     image: {
       target: 'https://www.google.com/webhp',
-      isExec: true
-    }
-  },
-  lexica: {
-    url: {target: 'https://lexica.art/?q={imgUrl}'},
-    image: {
-      target: 'https://lexica.art/',
-      isExec: true
-    }
-  },
-  kagi: {
-    url: {
-      target: 'https://kagi.com/images',
-      isExec: true
-    },
-    image: {
-      target: 'https://kagi.com/images',
-      isExec: true
-    }
-  },
-  freepik: {
-    image: {
-      target: 'https://www.freepik.com/search',
-      isExec: true
-    }
-  },
-  icons8: {
-    image: {
-      target: 'https://icons8.com/',
       isExec: true
     }
   },
@@ -345,46 +100,23 @@ const engines = {
       target: searchUrl,
       isTaskId: true
     }
-  },
-  unsplash: {
-    image: {
-      target: 'https://unsplash.com/',
-      isExec: true
-    }
   }
 };
 
-const censoredEngines = ['baidu', 'sogou', 'qihoo', 'taobao', 'alibabaChina'];
+const censoredEngines = [];
 
-const engineIconAlias = {branddb: 'wipo', madridMonitor: 'wipo'};
+const engineIconAlias = {};
 
 const engineIconVariants = {
-  getty: ['dark'],
-  istock: ['dark'],
-  depositphotos: ['dark'],
-  alamy: ['dark'],
-  '123rf': ['dark'],
-  nzTrademark: ['dark'],
-  stocksy: ['dark'],
-  lykdat: ['dark'],
-  lexica: ['dark'],
-  jpDesign: ['dark'],
   pimeyes: ['dark'],
-  pond5: ['dark'],
-  saucenao: ['dark'],
-  ascii2d: ['dark'],
-  tmview: ['dark'],
-  pixta: ['dark'],
-  freepik: ['dark'],
-  lenso: ['dark'],
-  unsplash: ['dark']
+  lenso: ['dark']
 };
 
 const sponsorLogoVariants = {
   lenso: ['dark']
 };
 
-const rasterEngineIcons = ['iqdb', 'tineye', 'whatanime', 'repostSleuth'];
+const rasterEngineIcons = ['tineye'];
 
 // https://github.com/jshttp/mime-db
 const imageMimeTypes = {
@@ -581,118 +313,37 @@ const convertImageMimeTypes = ['image/webp', 'image/avif'];
 const webpEngineSupport = [
   'bing',
   'yandex',
-  'baidu',
   'tineye',
-  'whatanime',
-  'saucenao',
-  'ascii2d',
-  'adobestock',
-  'depositphotos',
-  'pinterest',
-  'qihoo',
-  'alibabaChina',
-  'dreamstime',
   'pimeyes',
-  'pond5',
-  'ikea',
-  'shein',
-  'lykdat',
+  'facecheck',
   'googleLens',
-  'lexica',
-  'icons8',
   'lenso',
-  'googleImages',
-  'unsplash'
+  'googleImages'
 ];
 
 // Search engines only support the image format in compatible browsers.
 // https://caniuse.com/avif
 const avifEngineSupport = [
   'bing',
-  'yandex',
-  'whatanime',
-  'adobestock',
-  'alibabaChina',
-  'dreamstime',
-  'pond5',
-  'lexica'
+  'yandex'
 ];
 
 const gifEngineSupport = [
   'bing',
   'yandex',
-  'baidu',
-  'sogou',
   'tineye',
-  'whatanime',
-  'saucenao',
-  'iqdb',
-  'ascii2d',
-  'qihoo',
-  'dreamstime',
-  'esearch',
-  'tmview',
-  'madridMonitor',
-  'auDesign',
-  'nzTrademark',
-  'jpDesign',
-  'pond5',
-  'repostSleuth',
-  'shein',
-  'lykdat',
-  'wildberries',
-  'lexica',
-  'googleImages',
-  'unsplash'
+  'googleImages'
 ];
 
 const maxImageUploadSize = {
-  bing: {api: 600 * 1024, ui: 20 * 1024 * 1024},
-  yandex: {api: 4 * 1024 * 1024, ui: Infinity},
-  baidu: {api: 2 * 1024 * 1024, ui: 10 * 1024 * 1024},
-  tineye: {ui: 10 * 1024 * 1024},
-  sogou: {ui: 10 * 1024 * 1024},
-  whatanime: {ui: Infinity},
-  saucenao: {ui: 15 * 1024 * 1024},
-  iqdb: {ui: 8 * 1024 * 1024},
-  ascii2d: {ui: 5 * 1024 * 1024},
-  getty: {ui: 20 * 1024 * 1024},
-  istock: {ui: 20 * 1024 * 1024},
-  shutterstock: {ui: 25 * 1024 * 1024},
-  adobestock: {ui: 20 * 1024 * 1024},
-  depositphotos: {ui: 10 * 1024 * 1024},
-  pinterest: {api: Infinity},
-  qihoo: {ui: 2 * 1024 * 1024},
-  taobao: {ui: 5 * 1024 * 1024},
-  alibabaChina: {ui: 20 * 1024 * 1024},
-  dreamstime: {ui: Infinity},
-  alamy: {ui: 5 * 1024 * 1024},
-  '123rf': {api: 5 * 1024 * 1024, ui: 5 * 1024 * 1024},
-  esearch: {ui: 5 * 1024 * 1024},
-  tmview: {ui: 2 * 1024 * 1024},
-  branddb: {ui: 2 * 1024 * 1024},
-  madridMonitor: {ui: 2 * 1024 * 1024},
-  auTrademark: {ui: 8 * 1024 * 1024},
-  auDesign: {ui: 20 * 1024 * 1024},
-  nzTrademark: {ui: 20 * 1024 * 1024},
-  jpDesign: {ui: 5 * 1024 * 1024},
   pimeyes: {ui: Infinity},
-  stocksy: {ui: 20 * 1024 * 1024},
-  pond5: {ui: 20 * 1024 * 1024},
-  pixta: {ui: 5 * 1024 * 1024},
-  ikea: {ui: 20 * 1024 * 1024},
-  repostSleuth: {ui: Infinity},
-  shein: {ui: 10 * 1024 * 1024},
-  lykdat: {ui: 9 * 1024 * 1024},
-  wildberries: {ui: 8 * 1024 * 1024},
+  facecheck: {ui: 10 * 1024 * 1024},
+  yandex: {api: 4 * 1024 * 1024, ui: Infinity},
+  bing: {api: 600 * 1024, ui: 20 * 1024 * 1024},
+  tineye: {ui: 10 * 1024 * 1024},
   googleLens: {api: 20 * 1024 * 1024},
-  lexica: {ui: 30 * 1024 * 1024},
-  kagi: {ui: 1 * 1024 * 1024},
-  freepik: {ui: 60 * 1024 * 1024},
-  icons8: {ui: 5 * 1024 * 1024},
   lenso: {ui: 10 * 1024 * 1024},
-  googleImages: {api: 20 * 1024 * 1024},
-  unsplash: {api: Infinity, ui: 20 * 1024 * 1024}
+  googleImages: {api: 20 * 1024 * 1024}
 };
 
 const chromeDesktopUA =

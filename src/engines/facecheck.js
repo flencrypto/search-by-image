@@ -1,7 +1,7 @@
-import {findNode, processNode, runOnce} from 'utils/common';
+import {findNode, runOnce} from 'utils/common';
 import {setFileInputData, initSearch, sendReceipt} from 'utils/engines';
 
-const engine = 'pimeyes';
+const engine = 'facecheck';
 
 async function collectResults() {
   return new Promise(resolve => {
@@ -17,13 +17,13 @@ async function collectResults() {
 
       const results = [];
 
-      // Look for result elements with face thumbnails
+      // Look for result elements on FaceCheck
       const selectors = [
-        '.results .result img[src]',
+        '.result img[src]',
         '[class*="result"] img[src]',
-        '.thumbnail img[src]',
+        '[class*="face"] img[src]',
         '[class*="match"] img[src]',
-        '[class*="face"] img[src]'
+        '.card img[src]'
       ];
 
       for (const selector of selectors) {
@@ -65,16 +65,7 @@ async function collectResults() {
 }
 
 async function search({session, search, image, storageIds}) {
-  const inputSelector = '.upload-file input#file-input';
-
-  processNode(inputSelector, function (node) {
-    node.addEventListener('click', ev => ev.preventDefault(), {
-      capture: true,
-      once: true
-    });
-  });
-
-  (await findNode('.upload-bar button[aria-label="upload photo" i]')).click();
+  const inputSelector = '#file_upload';
 
   const input = await findNode(inputSelector);
 
@@ -82,50 +73,25 @@ async function search({session, search, image, storageIds}) {
 
   await sendReceipt(storageIds);
 
-  input.dispatchEvent(new Event('change'));
-
-  const searchButton = await findNode('.start-search-inner > button', {
-    throwError: false
-  });
-
-  // button is missing when no faces were detected
-  if (searchButton) {
-    if (searchButton.classList.contains('disabled')) {
-      await findNode('.permissions input[type=checkbox]');
-
-      for (const checkbox of document.querySelectorAll(
-        '.permissions input[type=checkbox]'
-      )) {
-        if (!checkbox.checked) {
-          checkbox.click();
-        }
-      }
-
-      (
-        await findNode('.start-search-inner > button:not(.disabled)', {
-          observerOptions: {attributes: true, attributeFilter: ['class']}
-        })
-      ).click();
-    } else {
-      searchButton.click();
-    }
-  }
+  input.dispatchEvent(new Event('change', {bubbles: true}));
 
   // Collect results after search is triggered
   try {
     const results = await collectResults();
     await browser.runtime.sendMessage({
       id: 'faceSearchResults',
-      engine: 'pimeyes',
+      engine: 'facecheck',
       results,
-      pageUrl: window.location.href
+      pageUrl: window.location.href,
+      sessionId: session.faceSessionId
     });
   } catch (e) {
     await browser.runtime.sendMessage({
       id: 'faceSearchResults',
-      engine: 'pimeyes',
+      engine: 'facecheck',
       results: [],
-      pageUrl: window.location.href
+      pageUrl: window.location.href,
+      sessionId: session.faceSessionId
     });
   }
 }

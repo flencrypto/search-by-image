@@ -199,45 +199,6 @@ async function searchGoogleImages({session, search, image} = {}) {
   return tabUrl;
 }
 
-async function searchPinterest({session, search, image} = {}) {
-  const data = new FormData();
-  data.append('image', image.imageBlob, image.imageFilename);
-  data.append('x', '0');
-  data.append('y', '0');
-  data.append('w', '1');
-  data.append('h', '1');
-  data.append('base_scheme', 'https');
-
-  const rsp = await fetch(
-    'https://api.pinterest.com/v3/visual_search/extension/image/',
-    {
-      referrer: '',
-      mode: 'cors',
-      method: 'PUT',
-      body: data
-    }
-  );
-
-  const response = await rsp.json();
-
-  if (
-    rsp.status !== 200 ||
-    response.status !== 'success' ||
-    !response.data ||
-    !response.data.length
-  ) {
-    throw new Error('search failed');
-  }
-
-  const results = response.data.map(item => ({
-    page: `https://pinterest.com/pin/${item.id}/`,
-    image: item.image_large_url,
-    text: item.description
-  }));
-
-  return results;
-}
-
 class EngineError extends Error {
   constructor(message) {
     super(message);
@@ -280,7 +241,6 @@ export {
   sendReceipt,
   initSearch,
   searchGoogleImages,
-  searchPinterest,
   EngineError,
   prepareImageForUpload
 };
