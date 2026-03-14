@@ -7,10 +7,18 @@
 
 ## Description
 
-Search by Face is a browser extension that makes effortless face searches
-possible via the internet, with support for dedicated face search engines
-such as PimEyes and FaceCheck.id, as well as general reverse image search
-engines like Google, Bing, Yandex and TinEye.
+Search by Face is a browser extension that actively finds people across
+the internet. Rather than just opening search services, the extension
+searches multiple face search engines simultaneously, collects the results,
+and presents them in a unified results page showing where the person was found.
+
+#### How It Works
+
+1. Right-click any face image and select "Search by Face"
+2. The extension searches all enabled engines simultaneously in background tabs
+3. A unified **Face Search Results** page opens immediately
+4. As each engine finds matches, results appear in real-time on the results page
+5. Click any result to view the source page where the face was found
 
 #### Search Engines
 

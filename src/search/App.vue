@@ -163,7 +163,8 @@ export default {
       faceSessionId: '',
       engineResults: {},
       pendingEngines: [],
-      pollTimer: null
+      pollTimer: null,
+      pollComplete: false
     };
   },
 
@@ -331,11 +332,10 @@ export default {
       // Keep polling while there are pending engines
       if (this.pendingEngines.length > 0) {
         this.pollTimer = setTimeout(() => this.pollForResults(), 2000);
-      } else {
-        // Do a few more polls to catch late results
-        this.pollTimer = setTimeout(() => {
-          this.pollForResults();
-        }, 5000);
+      } else if (!this.pollComplete) {
+        // Do a few more polls to catch late results, then stop
+        this.pollComplete = true;
+        this.pollTimer = setTimeout(() => this.pollForResults(), 5000);
       }
     },
 
