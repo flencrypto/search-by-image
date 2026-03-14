@@ -326,7 +326,9 @@ export default {
           );
         }
       } catch (e) {
-        // Background may not be ready yet
+        // Background may not be ready yet, retry without updating state
+        this.pollTimer = setTimeout(() => this.pollForResults(), 3000);
+        return;
       }
 
       // Keep polling while there are pending engines
