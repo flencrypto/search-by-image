@@ -51,7 +51,7 @@ import {
   runOnce
 } from 'utils/common';
 import {getScriptFunction} from 'utils/scripts';
-import {searchGoogleImages, searchPinterest} from 'utils/engines';
+import {searchGoogleImages} from 'utils/engines';
 import registry from 'utils/registry';
 import {optionKeys, engines, chromeMobileUA, chromeDesktopUA} from 'utils/data';
 import {targetEnv, mv3} from 'utils/config';
@@ -816,9 +816,7 @@ async function getTabUrl(session, search, image, taskId) {
 
   if (search.assetType === 'url') {
     let imgUrl = image.imageUrl;
-    if (engine !== 'ascii2d') {
-      imgUrl = encodeURIComponent(imgUrl);
-    }
+    imgUrl = encodeURIComponent(imgUrl);
     tabUrl = tabUrl.replace('{imgUrl}', imgUrl);
 
     if (engine === 'googleImages' && !session.options.localGoogle) {
@@ -1650,8 +1648,6 @@ async function processMessage(request, sender) {
       let data;
       if (search.engine === 'googleImages') {
         data = await searchGoogleImages({session, search, image});
-      } else if (search.engine === 'pinterest') {
-        data = await searchPinterest({session, search, image});
       }
 
       return Promise.resolve({data});

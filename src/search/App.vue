@@ -56,8 +56,7 @@ import {validateUrl, sendLargeMessage, showPage} from 'utils/app';
 import {getText} from 'utils/common';
 import {
   prepareImageForUpload,
-  searchGoogleImages,
-  searchPinterest
+  searchGoogleImages
 } from 'utils/engines';
 
 export default {
@@ -166,27 +165,7 @@ export default {
     },
 
     search: async function ({session, search, image} = {}) {
-      if (this.engine === 'pinterest') {
-        if (this.$env.isSafari && this.$env.isMobile) {
-          // Safari 15: cross-origin request from extension page is blocked on mobile.
-          const rsp = await browser.runtime.sendMessage({
-            id: 'searchImage',
-            session,
-            search,
-            image
-          });
-
-          if (rsp.error) {
-            throw new Error(rsp.error);
-          }
-
-          this.results = rsp.data;
-        } else {
-          this.results = await searchPinterest({session, search, image});
-        }
-
-        this.layoutGrid();
-      } else if (this.engine === 'googleImages') {
+      if (this.engine === 'googleImages') {
         let tabUrl;
         if (this.$env.isSafari && this.$env.isMobile) {
           // Safari 15: cross-origin request from extension page is blocked on mobile.
