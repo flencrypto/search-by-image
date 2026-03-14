@@ -120,21 +120,41 @@ async function openFaceResultsPage(session) {
 }
 
 function handleFaceSearchResults(request) {
-  // Find the session that this engine belongs to
-  for (const [sessionId, sessionData] of Object.entries(faceSearchSessions)) {
+  const {sessionId, engine, results, pageUrl} = request;
+
+  // Prefer direct session lookup when sessionId is provided
+  if (sessionId && faceSearchSessions[sessionId]) {
+    const sessionData = faceSearchSessions[sessionId];
+
+    sessionData.engines[engine] = {
+      results: results || [],
+      pageUrl: pageUrl || '',
+      status: 'done'
+    };
+
+    // Remove from pending
+    sessionData.pendingEngines = sessionData.pendingEngines.filter(
+      e => e !== engine
+    );
+
+    return;
+  }
+
+  // Fallback: attempt to find the session that this engine belongs to
+  for (const [id, sessionData] of Object.entries(faceSearchSessions)) {
     if (
-      sessionData.pendingEngines.includes(request.engine) ||
-      !sessionData.engines[request.engine]
+      sessionData.pendingEngines.includes(engine) ||
+      !sessionData.engines[engine]
     ) {
-      sessionData.engines[request.engine] = {
-        results: request.results || [],
-        pageUrl: request.pageUrl || '',
+      sessionData.engines[engine] = {
+        results: results || [],
+        pageUrl: pageUrl || '',
         status: 'done'
       };
 
       // Remove from pending
       sessionData.pendingEngines = sessionData.pendingEngines.filter(
-        e => e !== request.engine
+        e => e !== engine
       );
 
       break;
